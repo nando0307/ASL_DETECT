@@ -6,34 +6,66 @@ Real-time American Sign Language (ASL) alphabet recognition using **MediaPipe ha
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688)
 ![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10%2B-4285F4)
+![Accuracy](https://img.shields.io/badge/Val_Accuracy-97%25-brightgreen)
+
+<p align="center">
+  <img src="assets/Testingapp.png" alt="Live ASL Detection Demo" width="700">
+</p>
+
+<p align="center"><em>Real-time ASL letter detection — predicting "H" at 95% confidence with hand landmarks overlay</em></p>
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Demo](#demo)
 - [How It Works](#how-it-works)
 - [Project Structure](#project-structure)
 - [Setup & Installation](#setup--installation)
 - [Dataset](#dataset)
 - [Training the Model](#training-the-model)
+- [Training Results](#training-results)
 - [Running the Web App](#running-the-web-app)
 - [Running the Desktop App](#running-the-desktop-app)
 - [API Endpoints](#api-endpoints)
 - [Model Architecture](#model-architecture)
-- [Performance](#performance)
 - [Technologies Used](#technologies-used)
 
 ---
 
 ## Overview
 
-This project detects ASL alphabet letters (A–Z) in real time from a webcam feed. Instead of using a heavy CNN on raw pixel images, it leverages **MediaPipe's hand landmarker** to extract 21 3D keypoints from each hand, then classifies those 63 features with a small MLP — achieving fast, accurate inference with minimal compute.
+This project detects ASL alphabet letters (A–Z) in real time from a webcam feed. Instead of using a heavy CNN on raw pixel images, it leverages **MediaPipe's hand landmarker** to extract 21 3D keypoints from each hand, then classifies those 63 features with a small MLP — achieving **~97% validation accuracy** with fast, lightweight inference.
 
 The system is available as:
 - A **FastAPI web app** (browser-based webcam, works on any device)
 - A **desktop script** using OpenCV (local webcam via `realtime_asl.py`)
 - A **Jupyter notebook** for training, evaluation, and experimentation
+
+---
+
+## Demo
+
+### Web App Interface
+
+<p align="center">
+  <img src="assets/app_appearance.png" alt="Web App Interface" width="700">
+</p>
+
+The web app features a clean dark-themed UI with:
+- Live webcam feed with hand landmark overlay
+- Real-time prediction display with confidence bar
+- Letter history tracking
+- ASL alphabet reference chart for guidance
+
+### Live Detection
+
+<p align="center">
+  <img src="assets/Testingapp.png" alt="Live Detection" width="700">
+</p>
+
+The model detects hand signs in real time, drawing MediaPipe landmarks on your hand and displaying the predicted ASL letter with a confidence score.
 
 ---
 
@@ -43,6 +75,12 @@ The system is available as:
 Webcam Frame
      │
      ▼
+┌─────────────────┐
+│  CLAHE Enhance   │  Adaptive histogram equalization
+│                  │  for dark/low-contrast images
+└────────┬────────┘
+         │
+         ▼
 ┌─────────────────┐
 │  MediaPipe Hand  │  Detects 21 hand keypoints (x, y, z)
 │   Landmarker     │  per frame — invariant to background,
@@ -64,6 +102,14 @@ Webcam Frame
    Predicted Letter (A–Z) + Confidence
 ```
 
+### Landmark Extraction with CLAHE
+
+<p align="center">
+  <img src="assets/output.png" alt="CLAHE preprocessing and landmark detection" width="500">
+</p>
+
+<p align="center"><em>Left: Image after CLAHE enhancement — Right: MediaPipe 21-point hand landmarks detected</em></p>
+
 **Why landmarks instead of pixels?**
 - **63 features** vs 200×200×3 = 120,000 pixels — orders of magnitude smaller input
 - Invariant to background, lighting, skin tone, and hand scale
@@ -75,18 +121,19 @@ Webcam Frame
 ## Project Structure
 
 ```
-ASL_detection/
+ASL_DETECT/
 ├── app.py                  # FastAPI web server
 ├── templates/
 │   └── index.html          # Browser UI with webcam capture
 ├── static/
-│   └── style.css           # Styling for the web app
+│   ├── style.css           # Styling for the web app
+│   └── ASL_image.jpg       # ASL alphabet reference chart
+├── assets/                 # README images
 ├── realtime_asl.py         # Desktop webcam script (OpenCV)
 ├── ASL_detect.ipynb        # Training & evaluation notebook
 ├── helper_utils.py         # Kaggle dataset download utility
 ├── asl_landmark_mlp.pth    # Trained model checkpoint
 ├── hand_landmarker.task    # MediaPipe hand landmarker model
-├── landmark_features.npz   # Cached extracted features (generated)
 ├── requirements.txt        # Python dependencies
 ├── .gitignore
 └── README.md
@@ -170,7 +217,7 @@ Open `ASL_detect.ipynb` and run all cells in order:
 
 ### CLAHE Preprocessing
 
-Dark images in the dataset are enhanced using CLAHE (Contrast Limited Adaptive Histogram Equalization) before MediaPipe landmark detection. This significantly improves the detection rate:
+Dark images in the dataset are enhanced using CLAHE (Contrast Limited Adaptive Histogram Equalization) before MediaPipe landmark detection:
 
 ```python
 lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
@@ -188,6 +235,34 @@ Training samples are augmented on-the-fly in landmark space:
 
 ---
 
+## Training Results
+
+### Loss & Accuracy Curves
+
+<p align="center">
+  <img src="assets/loss&accuracy_training.png" alt="Training loss and accuracy curves" width="700">
+</p>
+
+The model converges smoothly over 40 epochs, reaching **~97% validation accuracy** with no signs of overfitting. The training and validation curves track closely, indicating good generalization.
+
+### Confusion Matrix
+
+<p align="center">
+  <img src="assets/ConfusionMatrix.png" alt="Confusion matrix for 26 ASL classes" width="650">
+</p>
+
+The confusion matrix shows strong diagonal dominance across all 26 classes. Most misclassifications occur between visually similar signs (e.g., M/N, R/U), which is expected given the subtle differences in hand pose.
+
+| Metric            | Value     |
+|-------------------|-----------|
+| Val Accuracy      | ~97%      |
+| Training Epochs   | 40        |
+| Total Parameters  | ~200K     |
+| Model Size        | ~800 KB   |
+| Inference Time    | <1ms      |
+
+---
+
 ## Running the Web App
 
 ```bash
@@ -196,10 +271,15 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 
 Then open **http://localhost:8000** in your browser.
 
+<p align="center">
+  <img src="assets/app_appearance.png" alt="Web app interface" width="700">
+</p>
+
 - Click **Start Camera** to begin
 - Show ASL hand signs to your webcam
 - The predicted letter and confidence are displayed in real time
 - Stable predictions are accumulated in the **History** bar
+- ASL alphabet reference chart is shown below the camera for guidance
 - Click **Stop Camera** to end
 
 > The browser requests webcam access. Allow it when prompted.
@@ -279,14 +359,6 @@ LandmarkMLP(
 | Optimizer        | AdamW           |
 | Scheduler        | CosineAnnealing |
 | Loss             | CrossEntropy (label smoothing=0.05) |
-
----
-
-## Performance
-
-- **MediaPipe detection rate:** Significantly improved with CLAHE preprocessing on dark images
-- **Real-time inference:** ~10 FPS in browser, 30+ FPS with desktop OpenCV
-- **Model size:** ~800 KB (vs ~14 MB for MobileNetV2)
 
 ---
 
