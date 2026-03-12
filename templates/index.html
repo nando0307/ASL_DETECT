@@ -12,10 +12,44 @@
         <p class="subtitle">Show a hand sign to your webcam — the model will predict the ASL letter.</p>
 
         <div class="main-area">
-            <div class="video-wrapper">
-                <video id="video" autoplay playsinline></video>
-                <canvas id="overlay"></canvas>
-                <div id="no-hand" class="status-badge hidden">No hand detected</div>
+            <div class="video-column">
+                <div class="video-wrapper">
+                    <video id="video" autoplay playsinline></video>
+                    <canvas id="overlay"></canvas>
+                    <div id="no-hand" class="status-badge hidden">No hand detected</div>
+                </div>
+
+                <div class="reference-card">
+                    <div class="pred-label">ASL Alphabet Reference</div>
+                    <div class="asl-grid">
+                        <div class="asl-sign"><span class="asl-letter">A</span><span class="asl-desc">Fist, thumb beside</span></div>
+                        <div class="asl-sign"><span class="asl-letter">B</span><span class="asl-desc">Flat hand, thumb tucked</span></div>
+                        <div class="asl-sign"><span class="asl-letter">C</span><span class="asl-desc">Curved hand, like C</span></div>
+                        <div class="asl-sign"><span class="asl-letter">D</span><span class="asl-desc">Index up, others touch thumb</span></div>
+                        <div class="asl-sign"><span class="asl-letter">E</span><span class="asl-desc">Fingers curled, thumb tucked</span></div>
+                        <div class="asl-sign"><span class="asl-letter">F</span><span class="asl-desc">OK sign, 3 fingers up</span></div>
+                        <div class="asl-sign"><span class="asl-letter">G</span><span class="asl-desc">Index + thumb point sideways</span></div>
+                        <div class="asl-sign"><span class="asl-letter">H</span><span class="asl-desc">Index + middle point sideways</span></div>
+                        <div class="asl-sign"><span class="asl-letter">I</span><span class="asl-desc">Fist, pinky up</span></div>
+                        <div class="asl-sign"><span class="asl-letter">J</span><span class="asl-desc">Pinky up, trace J</span></div>
+                        <div class="asl-sign"><span class="asl-letter">K</span><span class="asl-desc">Index + middle up, thumb between</span></div>
+                        <div class="asl-sign"><span class="asl-letter">L</span><span class="asl-desc">L-shape: index + thumb</span></div>
+                        <div class="asl-sign"><span class="asl-letter">M</span><span class="asl-desc">3 fingers over thumb</span></div>
+                        <div class="asl-sign"><span class="asl-letter">N</span><span class="asl-desc">2 fingers over thumb</span></div>
+                        <div class="asl-sign"><span class="asl-letter">O</span><span class="asl-desc">Fingertips touch thumb (O)</span></div>
+                        <div class="asl-sign"><span class="asl-letter">P</span><span class="asl-desc">K-hand pointing down</span></div>
+                        <div class="asl-sign"><span class="asl-letter">Q</span><span class="asl-desc">G-hand pointing down</span></div>
+                        <div class="asl-sign"><span class="asl-letter">R</span><span class="asl-desc">Crossed index + middle</span></div>
+                        <div class="asl-sign"><span class="asl-letter">S</span><span class="asl-desc">Fist, thumb over fingers</span></div>
+                        <div class="asl-sign"><span class="asl-letter">T</span><span class="asl-desc">Thumb between index + middle</span></div>
+                        <div class="asl-sign"><span class="asl-letter">U</span><span class="asl-desc">Index + middle up together</span></div>
+                        <div class="asl-sign"><span class="asl-letter">V</span><span class="asl-desc">Peace sign</span></div>
+                        <div class="asl-sign"><span class="asl-letter">W</span><span class="asl-desc">3 fingers up spread</span></div>
+                        <div class="asl-sign"><span class="asl-letter">X</span><span class="asl-desc">Index finger hooked</span></div>
+                        <div class="asl-sign"><span class="asl-letter">Y</span><span class="asl-desc">Thumb + pinky out (hang loose)</span></div>
+                        <div class="asl-sign"><span class="asl-letter">Z</span><span class="asl-desc">Index traces Z in air</span></div>
+                    </div>
+                </div>
             </div>
 
             <div class="sidebar">
