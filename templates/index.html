@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASL Detection — Real-Time</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>ASL Alphabet Detection</h1>
+        <p class="subtitle">Show a hand sign to your webcam — the model will predict the ASL letter.</p>
+
+        <div class="main-area">
+            <div class="video-wrapper">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="overlay"></canvas>
+                <div id="no-hand" class="status-badge hidden">No hand detected</div>
+            </div>
+
+            <div class="sidebar">
+                <div class="prediction-card">
+                    <div class="pred-label">Prediction</div>
+                    <div id="letter" class="letter">—</div>
+                    <div id="confidence" class="confidence">0%</div>
+                    <div class="conf-bar-bg"><div id="conf-bar" class="conf-bar"></div></div>
+                </div>
+
+                <div class="history-card">
+                    <div class="pred-label">History</div>
+                    <div id="history" class="history"></div>
+                </div>
+
+                <div class="controls">
+                    <button id="btn-start" onclick="startCamera()">Start Camera</button>
+                    <button id="btn-stop" onclick="stopCamera()" disabled>Stop Camera</button>
+                </div>
+
+                <div class="info">
+                    <p><strong>How it works:</strong></p>
+                    <ol>
+                        <li>MediaPipe detects 21 hand landmarks</li>
+                        <li>Landmarks are normalized (centered, scaled)</li>
+                        <li>MLP classifier predicts the ASL letter</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        const ctx = overlay.getContext('2d');
+        const letterEl = document.getElementById('letter');
+        const confEl = document.getElementById('confidence');
+        const confBar = document.getElementById('conf-bar');
+        const noHandEl = document.getElementById('no-hand');
+        const historyEl = document.getElementById('history');
+        const btnStart = document.getElementById('btn-start');
+        const btnStop = document.getElementById('btn-stop');
+
+        let stream = null;
+        let running = false;
+        let lastLetter = '';
+        let stableCount = 0;
+
+        const CONNECTIONS = [
+            [0,1],[1,2],[2,3],[3,4],
+            [0,5],[5,6],[6,7],[7,8],
+            [0,9],[9,10],[10,11],[11,12],
+            [0,13],[13,14],[14,15],[15,16],
+            [0,17],[17,18],[18,19],[19,20],
+            [5,9],[9,13],[13,17]
+        ];
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode: 'user' }
+                });
+                video.srcObject = stream;
+                await video.play();
+                overlay.width = video.videoWidth;
+                overlay.height = video.videoHeight;
+                running = true;
+                btnStart.disabled = true;
+                btnStop.disabled = false;
+                processFrame();
+            } catch (err) {
+                alert('Cannot access webcam: ' + err.message);
+            }
+        }
+
+        function stopCamera() {
+            running = false;
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
+            btnStart.disabled = false;
+            btnStop.disabled = true;
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+            letterEl.textContent = '—';
+            confEl.textContent = '0%';
+            confBar.style.width = '0%';
+        }
+
+        async function processFrame() {
+            if (!running) return;
+
+            // Capture frame to canvas, then to base64
+            const tmpCanvas = document.createElement('canvas');
+            tmpCanvas.width = video.videoWidth;
+            tmpCanvas.height = video.videoHeight;
+            const tmpCtx = tmpCanvas.getContext('2d');
+            tmpCtx.drawImage(video, 0, 0);
+            const dataUrl = tmpCanvas.toDataURL('image/jpeg', 0.8);
+
+            try {
+                const resp = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: dataUrl })
+                });
+                const data = await resp.json();
+
+                ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+                if (data.letter && data.landmarks) {
+                    noHandEl.classList.add('hidden');
+                    drawLandmarks(data.landmarks);
+
+                    letterEl.textContent = data.letter;
+                    const pct = Math.round(data.confidence * 100);
+                    confEl.textContent = pct + '%';
+                    confBar.style.width = pct + '%';
+                    confBar.style.background = pct > 70 ? '#22c55e' : pct > 40 ? '#eab308' : '#ef4444';
+
+                    // Track stable predictions for history
+                    if (data.letter === lastLetter && data.confidence > 0.7) {
+                        stableCount++;
+                    } else {
+                        lastLetter = data.letter;
+                        stableCount = 0;
+                    }
+                    if (stableCount === 8) {
+                        addToHistory(data.letter);
+                    }
+                } else {
+                    noHandEl.classList.remove('hidden');
+                    letterEl.textContent = '—';
+                    confEl.textContent = '0%';
+                    confBar.style.width = '0%';
+                }
+            } catch (err) {
+                console.error('Predict error:', err);
+            }
+
+            // ~10 FPS
+            setTimeout(processFrame, 100);
+        }
+
+        function drawLandmarks(landmarks) {
+            const w = overlay.width;
+            const h = overlay.height;
+
+            // Draw connections
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            for (const [i, j] of CONNECTIONS) {
+                ctx.beginPath();
+                ctx.moveTo(landmarks[i].x * w, landmarks[i].y * h);
+                ctx.lineTo(landmarks[j].x * w, landmarks[j].y * h);
+                ctx.stroke();
+            }
+
+            // Draw keypoints
+            for (const lm of landmarks) {
+                ctx.beginPath();
+                ctx.arc(lm.x * w, lm.y * h, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = '#ef4444';
+                ctx.fill();
+            }
+        }
+
+        function addToHistory(letter) {
+            const span = document.createElement('span');
+            span.className = 'history-letter';
+            span.textContent = letter;
+            historyEl.appendChild(span);
+            historyEl.scrollLeft = historyEl.scrollWidth;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Data (too large for GitHub)
+data/
+landmark_features.npz
+
+# Model artifacts (download or retrain)
+hand_landmarker.task
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+env/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
