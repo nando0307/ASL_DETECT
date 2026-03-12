@@ -28,7 +28,6 @@ Real-time American Sign Language (ASL) alphabet recognition using **MediaPipe ha
 - [Training Results](#training-results)
 - [Running the Web App](#running-the-web-app)
 - [Running the Desktop App](#running-the-desktop-app)
-- [API Endpoints](#api-endpoints)
 - [Model Architecture](#model-architecture)
 - [Technologies Used](#technologies-used)
 
@@ -185,6 +184,12 @@ This project uses the [ASL Alphabet dataset](https://www.kaggle.com/datasets/gra
 - **200 × 200 px** RGB images with clean hand poses
 - We filter to **A–Z only** (26 classes) for pure alphabet detection
 
+<p align="center">
+  <img src="assets/ASL_image.jpg" alt="ASL Alphabet Reference" width="500">
+</p>
+
+<p align="center"><em>The 26 ASL alphabet hand signs (A–Z) used for training and detection</em></p>
+
 ### Download the Dataset
 
 **Option 1 — Via the notebook:** Run Cell 4 in `ASL_detect.ipynb` (requires Kaggle API credentials in `~/.kaggle/kaggle.json`).
@@ -203,17 +208,18 @@ download_dataset()
 
 ## Training the Model
 
-Open `ASL_detect.ipynb` and run all cells in order:
+Open `ASL_detect.ipynb` and run all cells top-to-bottom. The notebook is organized into these sections:
 
-1. **Cell 1** — Imports & setup
-2. **Cell 3** — Config & download MediaPipe model
-3. **Cell 4** — Download dataset from Kaggle
-4. **Cell 5** — Extract landmarks with CLAHE preprocessing (cached after first run)
-5. **Cell 6** — Visualize sample landmarks
-6. **Cell 7** — Create train/val split with augmentation
-7. **Cell 9** — Define MLP architecture
-8. **Cell 10** — Train for 40 epochs (saves best model to `asl_landmark_mlp.pth`)
-9. **Cell 12** — Evaluate: classification report + confusion matrix
+1. **Imports & Setup** — Load all dependencies, detect device (MPS/CUDA/CPU)
+2. **Paths, Config & Download Hand Landmarker model** — Set hyperparameters, download MediaPipe model
+3. **Download grassknoted/asl-alphabet dataset** — Fetch 87k images from Kaggle
+4. **Extract landmarks from all training images** — CLAHE + MediaPipe extraction (cached after first run)
+5. **Visualise landmarks on a sample image** — Verify CLAHE and landmark detection
+6. **Data Pipeline with Augmentation** — Train/val split with rotation, scaling, jitter
+7. **MLP Classifier** — Define the 63→512→256→128→26 architecture
+8. **Training Loop** — 40 epochs with AdamW + CosineAnnealing (saves best model)
+9. **Training curves + sklearn evaluation** — Loss/accuracy plots, confusion matrix, classification report
+10. **Local Webcam Inference** — Real-time detection via OpenCV
 
 ### CLAHE Preprocessing
 
@@ -297,44 +303,6 @@ python realtime_asl.py
 - Press **`q`** to quit
 - Green skeleton = hand landmarks detected
 - Top-left text = predicted letter + confidence
-
----
-
-## API Endpoints
-
-| Method | Endpoint    | Description                              |
-|--------|-------------|------------------------------------------|
-| GET    | `/`         | Serves the webcam UI (HTML page)         |
-| POST   | `/predict`  | Accepts base64 JPEG, returns prediction  |
-| GET    | `/health`   | Health check: model status & class count |
-
-### POST `/predict`
-
-**Request:**
-```json
-{
-  "image": "data:image/jpeg;base64,/9j/4AAQ..."
-}
-```
-
-**Response:**
-```json
-{
-  "letter": "A",
-  "confidence": 0.943,
-  "landmarks": [{"x": 0.52, "y": 0.71}, ...],
-  "connections": [[0, 1], [1, 2], ...]
-}
-```
-
-If no hand is detected:
-```json
-{
-  "letter": null,
-  "confidence": 0,
-  "landmarks": null
-}
-```
 
 ---
 
